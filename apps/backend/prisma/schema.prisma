@@ -1,0 +1,169 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Using default Prisma Client output (@prisma/client)
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+
+enum ComplaintType {
+  ROADS
+  ELECTRICITY
+  WATER
+  POLLUTION
+  TRANSPORT
+  OTHERS
+}
+
+enum ComplaintStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum CityCorporation {
+  DNCC
+  DSCC
+}
+
+enum NotificationType {
+  COMPLAINT_STATUS_UPDATE
+  COMPLAINT_COMMENT
+  COMPLAINT_UPVOTE
+  SYSTEM_ANNOUNCEMENT
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+// Models
+
+model User {
+  id              String      @id @default(cuid())
+  email           String      @unique
+  passwordHash    String
+  name            String
+  profileImageUrl String?     @db.Text
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  complaints      Complaint[]
+  comments        Comment[]
+  upvotes         Upvote[]
+  notifications   Notification[]
+}
+
+model Thana {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique
+  createdAt DateTime    @default(now())
+
+  complaints Complaint[]
+}
+
+model Ward {
+  id               Int              @id @default(autoincrement())
+  cityCorporation  CityCorporation
+  wardNumber       Int
+  createdAt        DateTime         @default(now())
+
+  complaints       Complaint[]
+
+  @@unique([cityCorporation, wardNumber])
+}
+
+model Complaint {
+  id               String           @id @default(cuid())
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  type             ComplaintType
+  title            String
+  description      String           @db.Text
+  status           ComplaintStatus  @default(PENDING)
+  thana            Thana?           @relation(fields: [thanaId], references: [id])
+  thanaId          Int?
+  ward             Ward?            @relation(fields: [wardId], references: [id])
+  wardId           Int?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  images           ComplaintImage[]
+  comments         Comment[]
+  upvotes          Upvote[]
+  notifications    Notification[]
+}
+
+model ComplaintImage {
+  id           String     @id @default(cuid())
+  complaint    Complaint  @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  complaintId  String
+  orderIndex   Int        @default(0)
+  mimeType     String
+  width        Int?
+  height       Int?
+  sizeBytes    Int?
+  pathOriginal String     @db.Text
+  pathMedium   String?    @db.Text
+  pathThumb    String?    @db.Text
+  createdAt    DateTime   @default(now())
+
+  @@index([complaintId])
+}
+
+model Comment {
+  id          String     @id @default(cuid())
+  complaint   Complaint  @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  complaintId String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  content     String     @db.Text
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([complaintId])
+  @@index([userId])
+}
+
+model Upvote {
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  complaintId String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  createdAt   DateTime  @default(now())
+
+  @@id([complaintId, userId])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  type        NotificationType
+  status      NotificationStatus @default(UNREAD)
+  title       String
+  message     String           @db.Text
+  data        Json?            // Additional data like complaintId, commentId, etc.
+  complaint   Complaint?       @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  complaintId String?
+  createdAt   DateTime         @default(now())
+  readAt      DateTime?
+  archivedAt  DateTime?
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([createdAt])
+}
