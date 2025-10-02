@@ -28,13 +28,26 @@ export class AuthController {
     return result;
   }
 
-  @Post('logout')
-  @HttpCode(204)
-  logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
-    return;
-  }
+@Post('logout')
+@HttpCode(204)
+logout(@Res({ passthrough: true }) res: Response) {
+  const isProd = process.env.NODE_ENV === 'production';
+  
+  res.clearCookie('accessToken', {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+  });
+  
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+  });
+  
+  return;
+}
+
 
   @Get('refresh')
   @UseGuards(AuthGuard('jwt-refresh'))
@@ -61,13 +74,13 @@ export class AuthController {
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? 'strict' : 'lax',
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60, // 1 hour default; token expiry still enforced by JWT
     });
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? 'strict' : 'lax',
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 10, // 10 days
     });
   }

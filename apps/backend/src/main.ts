@@ -10,7 +10,7 @@ async function bootstrap() {
   
   // Specify exact Vercel frontend URL
   app.enableCors({ 
-    origin: 'https://dhaka-voice.vercel.app/', // Replace with actual Vercel URL
+    origin: 'https://dhaka-voice.vercel.app', // Replace with actual Vercel URL
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
